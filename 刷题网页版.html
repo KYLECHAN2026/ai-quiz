@@ -159,17 +159,25 @@
         
         async function loadQuestions() {
             document.getElementById('home').innerHTML = '<div class="loading">加载中...</div>';
-            try {
-                const response = await fetch('题目库.json');
-                const data = await response.json();
-                singleChoice = data.singleChoice || [];
-                multiChoice = data.multiChoice || [];
-                judgmentQuestions = data.judgment || [];
-                document.getElementById('stat-sc').textContent = singleChoice.length;
-                document.getElementById('stat-mc').textContent = multiChoice.length;
-                document.getElementById('stat-jc').textContent = judgmentQuestions.length;
-            } catch (e) {
-                document.getElementById('home').innerHTML = '<div class="loading">题库加载失败，请刷新重试</div>';
+            const maxRetries = 5;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch('questions.json?v=' + Date.now());
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const data = await response.json();
+                    singleChoice = data.singleChoice || [];
+                    multiChoice = data.multiChoice || [];
+                    judgmentQuestions = data.judgment || [];
+                    document.getElementById('stat-sc').textContent = singleChoice.length;
+                    document.getElementById('stat-mc').textContent = multiChoice.length;
+                    document.getElementById('stat-jc').textContent = judgmentQuestions.length;
+                    return;
+                } catch (e) {
+                    if (i === maxRetries - 1) {
+                        document.getElementById('home').innerHTML = '<div class="loading">题库加载失败，请刷新重试<br><button onclick="loadQuestions()" style="margin-top:10px;padding:8px 20px;cursor:pointer;">重试</button></div>';
+                    }
+                    await new Promise(r => setTimeout(r, 1000));
+                }
             }
         }
         
