@@ -159,12 +159,24 @@
         
         async function loadQuestions() {
             document.getElementById('home').innerHTML = '<div class="loading">加载中...</div>';
-            const maxRetries = 5;
+            const maxRetries = 3;
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const response = await fetch('questions.json?v=' + Date.now());
-                    if (!response.ok) throw new Error('HTTP ' + response.status);
-                    const data = await response.json();
+                    const data = await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', 'questions.json?v=' + Date.now(), true);
+                        xhr.onload = () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                resolve(JSON.parse(xhr.responseText));
+                            } else {
+                                reject(new Error('HTTP ' + xhr.status));
+                            }
+                        };
+                        xhr.onerror = () => reject(new Error('Network error'));
+                        xhr.timeout = 10000;
+                        xhr.ontimeout = () => reject(new Error('Timeout'));
+                        xhr.send();
+                    });
                     singleChoice = data.singleChoice || [];
                     multiChoice = data.multiChoice || [];
                     judgmentQuestions = data.judgment || [];
@@ -176,7 +188,7 @@
                     if (i === maxRetries - 1) {
                         document.getElementById('home').innerHTML = '<div class="loading">题库加载失败，请刷新重试<br><button onclick="loadQuestions()" style="margin-top:10px;padding:8px 20px;cursor:pointer;">重试</button></div>';
                     }
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 1500));
                 }
             }
         }
